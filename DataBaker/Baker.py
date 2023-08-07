@@ -1,4 +1,6 @@
 import json
+import os
+
 from geopy.distance import geodesic
 
 fix = []
@@ -135,4 +137,55 @@ def bakeRoute():
             resultRoute.append(segment)
     return resultRoute
 
-# def bakeSid():
+def bakeCIFP():
+    dirs = os.listdir('./navdata/CIFP')
+    resultData = {'SiE':{},'StaE':{}}
+    for airport in dirs:
+        with open(f'./navdata/CIFP/{airport}','r')as f:
+            airportData = f.read()
+        lines = airportData.split('\n')
+        resultData['SiE'][airport[:-4]] = set()
+        resultData['StaE'][airport[:-4]] = set()
+        for i in range(len(lines)):
+            line = lines[i]
+            if line[:3]=='SID':
+                fields = line[4:].split(',')
+                if fields[4] == ' ':
+                    continue
+                if i == len(lines)-1:
+                    continue
+                nextLine = lines[i+1]
+                if fields[1]=='5' or fields[1]=='2':
+                    if nextLine[:3] == 'SID':
+                        nextField = nextLine[4:].split(',')
+                        if nextField[2] == fields[2]:
+                            continue
+                    resultData['SiE'][airport[:-4]].add(fields[5]+fields[4])
+                elif fields[1]=='6' or fields[1]=='3':
+                    if nextLine[:3] == 'SID':
+                        nextField = nextLine[4:].split(',')
+                        if nextField[3] == fields[3]:
+                            continue
+                    resultData['SiE'][airport[:-4]].add(fields[5]+fields[4])
+            if line[:3] == 'STA':
+                fields = line[5:].split(',')
+                if fields[4] == ' ':
+                    continue
+                if i == len(lines)-1:
+                    continue
+                nextLine = lines[i-1]
+                if fields[1]=='5' or fields[1]=='2':
+                    if nextLine[:3] == 'STA':
+                        nextField = nextLine[5:].split(',')
+                        if nextField[2] == fields[2]:
+                            continue
+                    resultData['StaE'][airport[:-4]].add(fields[5]+fields[4])
+                if fields[1]=='1' or fields[1]=='4':
+                    if nextLine[:3] == 'STA':
+                        nextField = nextLine[5:].split(',')
+                        if nextField[3] == fields[3]:
+                            continue
+                    resultData['StaE'][airport[:-4]].add(fields[5]+fields[4])
+        resultData['SiE'][airport[:-4]] = list(resultData['SiE'][airport[:-4]])
+        resultData['StaE'][airport[:-4]] = list(resultData['StaE'][airport[:-4]])
+    return resultData
